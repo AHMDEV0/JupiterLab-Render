@@ -4,7 +4,13 @@ FROM ubuntu:latest
 # Update and install required packages
 RUN apt-get update && apt-get install -y \
     python3 \
-    python3-pip
+    python3-pip \
+    openssh-server \
+    sudo \
+    curl \
+    git \
+    lsb-release \
+    vim
 
 # Set the working directory
 WORKDIR /app
@@ -12,8 +18,14 @@ WORKDIR /app
 # Install JupyterLab
 RUN pip3 install jupyterlab
 
-# Expose port 443
-EXPOSE 443
+# Configure SSH
+RUN mkdir /var/run/sshd \
+    && echo 'root:Docker!' | chpasswd \
+    && sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && echo 'AllowUsers root' >> /etc/ssh/sshd_config
 
-# Start JupyterLab on port 8080 without authentication
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=443", "--no-browser", "--allow-root", "--NotebookApp.token=''"]
+# Expose ports for SSH (22) and JupyterLab (443)
+EXPOSE 22 443
+
+# Start SSH and JupyterLab on port 443
+CMD service ssh start && jupyter lab --ip=0.0.0.0 --port=443 --no-browser --allow-root --NotebookApp.token=''
